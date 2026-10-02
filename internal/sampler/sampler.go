@@ -13,7 +13,10 @@ import (
 	"batrat/internal/power"
 )
 
-const historyLen = 120
+const (
+	historyLen    = 120
+	sysHistoryLen = 3600
+)
 
 type Config struct {
 	Interval  time.Duration
@@ -34,11 +37,12 @@ type Sampler struct {
 	prevIdle  uint64
 	prevProcs map[int]uint64
 
-	sysEnergy float64
-	energy    map[int]float64
-	cpuTotal  map[int]uint64
-	names     map[int]string
-	history   map[int][]float64
+	sysEnergy  float64
+	energy     map[int]float64
+	cpuTotal   map[int]uint64
+	names      map[int]string
+	history    map[int][]float64
+	sysHistory []float64
 
 	lastSample model.Sample
 }
@@ -84,6 +88,10 @@ func (s *Sampler) Tick() model.Sample {
 		sysPower := s.power.SysPower(util)
 		sample.SysPower = sysPower
 		s.sysEnergy += sysPower * dt
+		s.sysHistory = append(s.sysHistory, sysPower)
+		if len(s.sysHistory) > sysHistoryLen {
+			s.sysHistory = s.sysHistory[len(s.sysHistory)-sysHistoryLen:]
+		}
 
 		procs := make([]model.ProcSample, 0, len(cur))
 		for pid, j := range cur {
@@ -130,6 +138,7 @@ func (s *Sampler) Reset() {
 	s.energy = make(map[int]float64)
 	s.cpuTotal = make(map[int]uint64)
 	s.history = make(map[int][]float64)
+	s.sysHistory = nil
 	s.sysEnergy = 0
 	s.started = time.Now()
 	s.lastSample = model.Sample{}
@@ -140,7 +149,8 @@ func (s *Sampler) TotalEnergyJ() float64 { return s.sysEnergy }
 func (s *Sampler) SysPower() float64     { return s.lastSample.SysPower }
 func (s *Sampler) LastSample() model.Sample { return s.lastSample }
 func (s *Sampler) History(pid int) []float64 { return s.history[pid] }
-func (s *Sampler) Source() string          { return s.power.Source() }
+func (s *Sampler) SysHistory() []float64    { return s.sysHistory }
+func (s *Sampler) Source() string           { return s.power.Source() }
 
 func (s *Sampler) ReportData() model.ReportData {
 	procs := make([]model.ProcStat, 0, len(s.energy))

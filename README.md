@@ -11,12 +11,14 @@ computes per-process CPU jiffie deltas, and attributes system power
 proportionally:
 
 ```
-P_sys  = P_idle + cpu_util × (P_max − P_idle)
+P_sys  = P_idle + cpu_util × (P_max − P_idle) × (f / f_max)
 P_proc = (proc_cpu_delta / total_cpu_delta) × P_sys
 ```
 
-Energy is integrated over time, so reports are valid for any run length.
-No root required. Tune `-idle-w` / `-max-w` to match your machine.
+The `(f / f_max)` term scales by the CPU's current frequency, so the estimate
+tracks reality on any machine without per-machine tuning. Energy is integrated
+over time, so reports are valid for any run length. No root required. Tune
+`-idle-w` / `-max-w` to match your machine.
 
 ## Build
 
@@ -31,6 +33,13 @@ go build ./cmd/batrat
 ```
 ./batrat
 ```
+
+The dashboard shows a **system power area chart** at the top — a gradient fill
+(`█` solid at the bottom fading to `░` at the top) that aligns with the text
+block, neither wider than the `TREND` column nor extending left of `RANK`. Below
+it, a ranked process table with a per-process **trend indicator** (`▲` rising /
+`▼` falling / `▬` flat). The layout adapts to the terminal size and repaints
+cleanly on resize.
 
 - `q` / `ctrl+c` — quit and print report
 - `space` — pause

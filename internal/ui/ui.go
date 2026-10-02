@@ -17,9 +17,10 @@ var (
 	headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39"))
 	topStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
 	dimStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	upStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	downStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("46"))
+	chartStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("45"))
 )
-
-var sparkChars = []rune{'▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'}
 
 type tickMsg time.Time
 
@@ -45,7 +46,7 @@ func (m app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		return m, nil
+		return m, tea.ClearScreen
 	case tickMsg:
 		if !m.paused {
 			m.s.Tick()
@@ -84,7 +85,7 @@ func (m app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m app) View() string {
-	if m.width == 0 {
+	if m.width == 0 || m.height == 0 {
 		return "loading..."
 	}
 	var b strings.Builder
@@ -100,28 +101,40 @@ func (m app) View() string {
 	}
 	b.WriteString("\n\n")
 
+	chartHeight := m.height / 4
+	if chartHeight < 3 {
+		chartHeight = 3
+	}
+	if chartHeight > 10 {
+		chartHeight = 10
+	}
+	header := fmt.Sprintf("  %-4s  %-22s  %-7s  %-6s  %-7s  %-9s  %s",
+		"RANK", "NAME", "PID", "CPU%", "POWER", "ENERGY", "TREND")
+	chartWidth := lipgloss.Width(header) - 2
+	if chartWidth < 1 {
+		chartWidth = 1
+	}
+	b.WriteString(chartStyle.Render(indent(renderAreaChart(m.s.SysHistory(), chartWidth, chartHeight), 2)))
+	b.WriteString("\n\n")
+
 	procs := m.s.LastSample().Procs
 	if m.rankMode == "energy" {
 		procs = make([]model.ProcSample, len(procs))
 		copy(procs, m.s.LastSample().Procs)
 		sort.Slice(procs, func(i, j int) bool { return procs[i].EnergyJ > procs[j].EnergyJ })
 	}
-	maxP := 0.0
-	for _, p := range procs {
-		if p.Power > maxP {
-			maxP = p.Power
-		}
-	}
-	if maxP <= 0 {
-		maxP = 1
-	}
 
-	n := m.top
+	n := m.height - chartHeight - 5
+	if n < 0 {
+		n = 0
+	}
+	if n > m.top {
+		n = m.top
+	}
 	if n > len(procs) {
 		n = len(procs)
 	}
-	fmt.Fprintf(&b, "  %-4s  %-22s  %-7s  %-6s  %-7s  %-9s  %s\n",
-		"RANK", "NAME", "PID", "CPU%", "POWER", "ENERGY", "LAST 40s")
+	b.WriteString(header + "\n")
 	for i := 0; i < n; i++ {
 		p := procs[i]
 		name := p.Name
@@ -134,31 +147,59 @@ func (m app) View() string {
 		}
 		fmt.Fprintf(&b, "  %-4d  %s  %-7d  %-5.1f%%  %-6.1f W  %-8s  %s\n",
 			i+1, style.Width(22).Render(name), p.PID, p.CPUPct, p.Power,
-			model.FormatWh(p.EnergyJ/3600), sparkline(m.s.History(p.PID), maxP))
+			model.FormatWh(p.EnergyJ/3600), trendIndicator(m.s.History(p.PID)))
 	}
 	b.WriteString("\n")
 	b.WriteString(dimStyle.Render("[q]uit  [space] pause  [r]eset  [s]ort  [+/-] interval"))
 	return b.String()
 }
 
-func sparkline(hist []float64, max float64) string {
-	if len(hist) == 0 {
-		return ""
+func indent(s string, n int) string {
+	pad := strings.Repeat(" ", n)
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		lines[i] = pad + l
 	}
-	start := len(hist) - 40
-	if start < 0 {
-		start = 0
+	return strings.Join(lines, "\n")
+}
+
+func trendIndicator(hist []float64) string {
+	if len(hist) < 2 {
+		return dimStyle.Render("▬")
 	}
-	var b strings.Builder
-	for _, v := range hist[start:] {
-		idx := int(v / max * float64(len(sparkChars)-1))
-		if idx < 0 {
-			idx = 0
-		}
-		if idx >= len(sparkChars) {
-			idx = len(sparkChars) - 1
-		}
-		b.WriteRune(sparkChars[idx])
+	recent := avgLast(hist, 3)
+	prev := avgPrev(hist, 3)
+	switch {
+	case recent > prev*1.1:
+		return upStyle.Render("▲")
+	case recent < prev*0.9:
+		return downStyle.Render("▼")
+	default:
+		return dimStyle.Render("▬")
 	}
-	return b.String()
+}
+
+func avgLast(v []float64, k int) float64 {
+	if len(v) == 0 {
+		return 0
+	}
+	if k > len(v) {
+		k = len(v)
+	}
+	var sum float64
+	for _, x := range v[len(v)-k:] {
+		sum += x
+	}
+	return sum / float64(k)
+}
+
+func avgPrev(v []float64, k int) float64 {
+	if len(v) < 2*k {
+		return avgLast(v, k)
+	}
+	var sum float64
+	for _, x := range v[len(v)-2*k : len(v)-k] {
+		sum += x
+	}
+	return sum / float64(k)
 }
