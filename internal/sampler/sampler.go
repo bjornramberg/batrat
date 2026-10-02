@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"batrat/internal/model"
+	"batrat/internal/power"
 )
 
 const historyLen = 120
@@ -18,10 +19,12 @@ type Config struct {
 	Interval  time.Duration
 	IdleWatts float64
 	MaxWatts  float64
+	NoRAPL    bool
 }
 
 type Sampler struct {
 	cfg     Config
+	power   *power.Manager
 	clkTck  float64
 	started time.Time
 	last    time.Time
@@ -43,6 +46,7 @@ type Sampler struct {
 func New(cfg Config) *Sampler {
 	return &Sampler{
 		cfg:      cfg,
+		power:    power.NewManager(cfg.IdleWatts, cfg.MaxWatts, cfg.NoRAPL),
 		clkTck:   100.0,
 		prevProcs: make(map[int]uint64),
 		energy:    make(map[int]float64),
@@ -77,7 +81,7 @@ func (s *Sampler) Tick() model.Sample {
 				util = 1
 			}
 		}
-		sysPower := s.cfg.IdleWatts + util*(s.cfg.MaxWatts-s.cfg.IdleWatts)
+		sysPower := s.power.SysPower(util)
 		sample.SysPower = sysPower
 		s.sysEnergy += sysPower * dt
 
@@ -136,6 +140,7 @@ func (s *Sampler) TotalEnergyJ() float64 { return s.sysEnergy }
 func (s *Sampler) SysPower() float64     { return s.lastSample.SysPower }
 func (s *Sampler) LastSample() model.Sample { return s.lastSample }
 func (s *Sampler) History(pid int) []float64 { return s.history[pid] }
+func (s *Sampler) Source() string          { return s.power.Source() }
 
 func (s *Sampler) ReportData() model.ReportData {
 	procs := make([]model.ProcStat, 0, len(s.energy))

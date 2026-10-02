@@ -25,6 +25,7 @@ func main() {
 		idleW      = flag.Float64("idle-w", 8, "system idle power in watts")
 		maxW       = flag.Float64("max-w", 105, "system max power in watts")
 		top        = flag.Int("top", 15, "number of processes shown")
+		noRAPL     = flag.Bool("no-rapl", false, "force heuristic power estimate, ignore RAPL")
 	)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `batrat — lightweight terminal power profiler for Linux
@@ -51,7 +52,7 @@ Flags:
 	}
 	flag.Parse()
 
-	cfg := sampler.Config{Interval: *interval, IdleWatts: *idleW, MaxWatts: *maxW}
+	cfg := sampler.Config{Interval: *interval, IdleWatts: *idleW, MaxWatts: *maxW, NoRAPL: *noRAPL}
 
 	if *daemonMode {
 		d, err := parseDuration(*duration)

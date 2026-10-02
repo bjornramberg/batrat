@@ -57,9 +57,20 @@ the report is written when the duration elapses.
 | `-o`         |         | report output path (daemon: `batrat-<timestamp>.txt`) |
 | `-f`         | `text`  | `text` or `csv`                              |
 | `-interval`  | `1s`    | sampling interval                            |
-| `-idle-w`    | `8`     | system idle power (W)                        |
-| `-max-w`     | `105`   | system max power (W)                         |
+| `-idle-w`    | `8`     | system idle power (W), heuristic fallback     |
+| `-max-w`     | `105`   | system max power (W), heuristic fallback      |
 | `-top`       | `15`    | processes in report                          |
+| `-no-rapl`   | off     | force heuristic estimate, ignore RAPL         |
+
+## Power sources
+
+batrat uses the most accurate source available:
+
+- **RAPL** (`src: rapl`) — reads real CPU package energy counters from
+  `/sys/class/powercap` when readable (usually requires root). Measured watts.
+- **Heuristic** (`src: est`) — estimates from CPU time, scaled by per-core
+  frequency: `P = idle + util × (max − idle) × (f / f_max)`. Used automatically
+  when RAPL is unavailable. The header shows which source is active.
 
 ## Report example
 

@@ -92,9 +92,9 @@ func (m app) View() string {
 	if started := m.s.StartTime(); !started.IsZero() {
 		elapsed = time.Since(started).Round(time.Second)
 	}
-	fmt.Fprintf(&b, "%s   draw %.1f W   total %s   up %s   sort: %s",
+	fmt.Fprintf(&b, "%s   draw %.1f W   total %s   up %s   sort: %s   src: %s",
 		headerStyle.Render("batrat"), m.s.SysPower(),
-		model.FormatWh(m.s.TotalEnergyJ()/3600), elapsed, m.rankMode)
+		model.FormatWh(m.s.TotalEnergyJ()/3600), elapsed, m.rankMode, m.s.Source())
 	if m.paused {
 		b.WriteString("   " + topStyle.Render("PAUSED"))
 	}
