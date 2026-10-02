@@ -35,6 +35,7 @@ go build ./cmd/batrat
 - `q` / `ctrl+c` — quit and print report
 - `space` — pause
 - `r` — reset counters
+- `s` — toggle ranking: `power` (per-tick draw) / `energy` (cumulative buildup)
 - `+` / `-` — adjust sampling interval
 
 ### Daemon (headless, self-detaching)

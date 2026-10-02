@@ -26,6 +26,29 @@ func main() {
 		maxW       = flag.Float64("max-w", 105, "system max power in watts")
 		top        = flag.Int("top", 15, "number of processes shown")
 	)
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `batrat — lightweight terminal power profiler for Linux
+
+Samples CPU time per process, converts it to estimated power draw, and shows
+a live dashboard of what's draining your machine — or runs headless and
+writes a report.
+
+Usage:
+  batrat                              interactive live TUI (q to quit, prints report)
+  batrat -d -t 15                     daemon: sample 15 min, write report to file
+  batrat -d -t 1h30m -o report.csv -f csv
+
+Interactive keys:
+  q / ctrl+c   quit and print report
+  space        pause
+  r            reset counters
+  s            toggle ranking: power (per-tick) / energy (cumulative)
+  + / -        adjust sampling interval
+
+Flags:
+`)
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	cfg := sampler.Config{Interval: *interval, IdleWatts: *idleW, MaxWatts: *maxW}

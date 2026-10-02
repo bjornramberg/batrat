@@ -88,9 +88,13 @@ func (m app) View() string {
 		return "loading..."
 	}
 	var b strings.Builder
-	elapsed := time.Since(m.s.StartTime()).Round(time.Second)
-	fmt.Fprintf(&b, "%s  %.1f W   %.2f Wh total   %s elapsed   sort: %s",
-		headerStyle.Render("batrat"), m.s.SysPower(), m.s.TotalEnergyJ()/3600, elapsed, m.rankMode)
+	elapsed := time.Duration(0)
+	if started := m.s.StartTime(); !started.IsZero() {
+		elapsed = time.Since(started).Round(time.Second)
+	}
+	fmt.Fprintf(&b, "%s   draw %.1f W   total %s   up %s   sort: %s",
+		headerStyle.Render("batrat"), m.s.SysPower(),
+		model.FormatWh(m.s.TotalEnergyJ()/3600), elapsed, m.rankMode)
 	if m.paused {
 		b.WriteString("   " + topStyle.Render("PAUSED"))
 	}
