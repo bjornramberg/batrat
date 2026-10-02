@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -27,12 +28,13 @@ type app struct {
 	interval time.Duration
 	top      int
 	paused   bool
+	rankMode string
 	width    int
 	height   int
 }
 
 func New(s *sampler.Sampler, interval time.Duration, top int) app {
-	return app{s: s, interval: interval, top: top}
+	return app{s: s, interval: interval, top: top, rankMode: "power"}
 }
 
 func (m app) Init() tea.Cmd {
@@ -59,6 +61,13 @@ func (m app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			m.s.Reset()
 			return m, nil
+		case "s":
+			if m.rankMode == "power" {
+				m.rankMode = "energy"
+			} else {
+				m.rankMode = "power"
+			}
+			return m, nil
 		case "+", "=":
 			if m.interval < 10*time.Second {
 				m.interval *= 2
@@ -80,14 +89,19 @@ func (m app) View() string {
 	}
 	var b strings.Builder
 	elapsed := time.Since(m.s.StartTime()).Round(time.Second)
-	fmt.Fprintf(&b, "%s  %.1f W   %.2f Wh total   %s elapsed",
-		headerStyle.Render("batrat"), m.s.SysPower(), m.s.TotalEnergyJ()/3600, elapsed)
+	fmt.Fprintf(&b, "%s  %.1f W   %.2f Wh total   %s elapsed   sort: %s",
+		headerStyle.Render("batrat"), m.s.SysPower(), m.s.TotalEnergyJ()/3600, elapsed, m.rankMode)
 	if m.paused {
 		b.WriteString("   " + topStyle.Render("PAUSED"))
 	}
 	b.WriteString("\n\n")
 
 	procs := m.s.LastSample().Procs
+	if m.rankMode == "energy" {
+		procs = make([]model.ProcSample, len(procs))
+		copy(procs, m.s.LastSample().Procs)
+		sort.Slice(procs, func(i, j int) bool { return procs[i].EnergyJ > procs[j].EnergyJ })
+	}
 	maxP := 0.0
 	for _, p := range procs {
 		if p.Power > maxP {
@@ -107,19 +121,19 @@ func (m app) View() string {
 	for i := 0; i < n; i++ {
 		p := procs[i]
 		name := p.Name
-		if len(name) > 22 {
-			name = name[:22]
+		if r := []rune(name); len(r) > 22 {
+			name = string(r[:22])
 		}
 		style := lipgloss.NewStyle()
 		if i == 0 {
 			style = topStyle
 		}
-		fmt.Fprintf(&b, "  %-4d  %-22s  %-7d  %-5.1f%%  %-6.1f W  %-8s  %s\n",
-			i+1, style.Render(name), p.PID, p.CPUPct, p.Power,
+		fmt.Fprintf(&b, "  %-4d  %s  %-7d  %-5.1f%%  %-6.1f W  %-8s  %s\n",
+			i+1, style.Width(22).Render(name), p.PID, p.CPUPct, p.Power,
 			model.FormatWh(p.EnergyJ/3600), sparkline(m.s.History(p.PID), maxP))
 	}
 	b.WriteString("\n")
-	b.WriteString(dimStyle.Render("[q]uit  [space] pause  [r] eset  [+/-] interval"))
+	b.WriteString(dimStyle.Render("[q]uit  [space] pause  [r]eset  [s]ort  [+/-] interval"))
 	return b.String()
 }
 

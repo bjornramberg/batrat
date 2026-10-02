@@ -1,0 +1,25 @@
+# Build artifacts
+/batrat
+/batrat-*
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# Tool-generated reports
+batrat-*.txt
+batrat-*.csv
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
