@@ -2,7 +2,7 @@
 
 A lightweight terminal power profiler for Linux. Samples CPU time per process,
 converts it to estimated power draw, and shows a live dashboard of what's
-draining your machine — or runs headless and writes a report.
+draining your machine. Will also run headless and output to a report.
 
 ## How it works
 
