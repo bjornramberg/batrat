@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"batrat/internal/model"
+	"batrat/internal/report"
 	"batrat/internal/sampler"
 )
 
@@ -28,14 +30,21 @@ type app struct {
 	s        *sampler.Sampler
 	interval time.Duration
 	top      int
+	outPath  string
+	format   string
 	paused   bool
 	rankMode string
 	width    int
 	height   int
+	status   string
+	statusAt time.Time
 }
 
-func New(s *sampler.Sampler, interval time.Duration, top int) app {
-	return app{s: s, interval: interval, top: top, rankMode: "power"}
+func New(s *sampler.Sampler, interval time.Duration, top int, outPath, format string) app {
+	if format == "" {
+		format = "text"
+	}
+	return app{s: s, interval: interval, top: top, outPath: outPath, format: format, rankMode: "power"}
 }
 
 func (m app) Init() tea.Cmd {
@@ -62,6 +71,9 @@ func (m app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			m.s.Reset()
 			return m, nil
+		case "w":
+			m.saveReport()
+			return m, nil
 		case "s":
 			if m.rankMode == "power" {
 				m.rankMode = "energy"
@@ -82,6 +94,27 @@ func (m app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+func (m *app) saveReport() {
+	path := m.outPath
+	if path == "" {
+		path = fmt.Sprintf("batrat-%s.%s", time.Now().Format("20060102-150405"), reportExt(m.format))
+	}
+	rep := report.Build(m.s.ReportData(), m.top)
+	if err := os.WriteFile(path, []byte(rep.Render(m.format)), 0644); err != nil {
+		m.status = "save failed: " + err.Error()
+	} else {
+		m.status = "saved report to " + path
+	}
+	m.statusAt = time.Now()
+}
+
+func reportExt(format string) string {
+	if format == "csv" {
+		return "csv"
+	}
+	return "txt"
 }
 
 func (m app) View() string {
@@ -150,7 +183,10 @@ func (m app) View() string {
 			model.FormatWh(p.EnergyJ/3600), trendIndicator(m.s.History(p.PID)))
 	}
 	b.WriteString("\n")
-	b.WriteString(dimStyle.Render("[q]uit  [space] pause  [r]eset  [s]ort  [+/-] interval"))
+	b.WriteString(dimStyle.Render("[q]uit  [space] pause  [r]eset  [s]ort  [w]rite report  [+/-] interval"))
+	if m.status != "" && time.Since(m.statusAt) < 5*time.Second {
+		b.WriteString("\n" + headerStyle.Render(m.status))
+	}
 	return b.String()
 }
 
