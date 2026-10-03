@@ -184,8 +184,9 @@ func (m app) View() string {
 	}
 	b.WriteString("\n")
 	b.WriteString(dimStyle.Render("[q]uit  [space] pause  [r]eset  [s]ort  [w]rite report  [+/-] interval"))
+	b.WriteString("\n")
 	if m.status != "" && time.Since(m.statusAt) < 5*time.Second {
-		b.WriteString("\n" + headerStyle.Render(m.status))
+		b.WriteString(headerStyle.Render(m.status))
 	}
 	return b.String()
 }
