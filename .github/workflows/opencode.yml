@@ -30,4 +30,4 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          model: opencode-go/longcat-2.5-preview-free
+          model: opencode-go/deepseek-v4.1-flash
