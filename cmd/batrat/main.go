@@ -41,6 +41,7 @@ Usage:
 
 Interactive keys:
   q / ctrl+c   quit and print report
+  w            write report to file (default: batrat-<timestamp>.<ext>)
   space        pause
   r            reset counters
   s            toggle ranking: power (per-tick) / energy (cumulative)
@@ -74,7 +75,7 @@ Flags:
 	}
 
 	s := sampler.New(cfg)
-	m := ui.New(s, *interval, *top)
+	m := ui.New(s, *interval, *top, *outPath, *format)
 	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "batrat:", err)
 		os.Exit(1)

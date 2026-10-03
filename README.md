@@ -42,6 +42,8 @@ it, a ranked process table with a per-process **trend indicator** (`▲` rising 
 cleanly on resize.
 
 - `q` / `ctrl+c` — quit and print report
+- `w` — write a report to a file mid-session (uses `-o` if set, otherwise
+  `batrat-<timestamp>.<ext>`; format follows `-f`)
 - `space` — pause
 - `r` — reset counters
 - `s` — toggle ranking: `power` (per-tick draw) / `energy` (cumulative buildup)
