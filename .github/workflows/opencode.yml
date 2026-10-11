@@ -33,4 +33,4 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          model: opencode-go/longcat-2.5-preview-free
+          model: opencode-go/muse-spark-1.3-contributor
