@@ -61,7 +61,7 @@ the report is written when the duration elapses.
 
 ### Flags
 
-| flag         | default | description                                  |
+| flag         | default | description                                   |
 |--------------|---------|----------------------------------------------|
 | `-d`         | off     | daemon mode                                  |
 | `-t`         | `15m`   | duration: minutes (`15`) or Go duration (`1h30m`) |
